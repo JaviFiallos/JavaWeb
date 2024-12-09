@@ -1,0 +1,222 @@
+<?php
+class Conexion
+{
+    public function conectar()
+    {
+        $host = "localhost:4040";
+        $db = "soa";
+        $usuario = "root";
+        $psw = "";
+        try {
+            $conn = new PDO("mysql:host=" . $host . ";dbname=" . $db, $usuario, $psw);
+            //print_r("Estás conectado");
+            return $conn;
+        } catch (Exception $e) {
+            die("Error en la conexión: " . $e->getMessage());
+        }
+        
+    }
+}
+
+
+<?php
+include_once('conexion.php');
+class CRUD
+{
+    private $conexion;
+    public function __construct(){
+        $this->conexion = new CONEXION();
+    }
+
+    public function obtenerEstudiantes(){
+        $this->conexion->conectar();
+
+        $sql = "SELECT * FROM estudiantes";
+        $resul = $this->conexion->conectar()->prepare($sql);
+        $resul->execute();
+        $data = $resul->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($data);
+    }
+    public function obtenerEstudiante($cedula){
+        $this->conexion->Conectar();
+
+        // Para guardar todos los resultados posibles
+        // que coincidan con la busqueda
+        $objetos = array();
+
+        $sql = "SELECT * FROM estudiantes WHERE cedula = '$cedula'";
+        $resul = $this->conexion->conectar()->prepare($sql);
+        $resul->execute();
+
+        while ($row = $resul->fetch(PDO::FETCH_ASSOC)) {
+            $objeto = array(
+                "cedula" => $row["cedula"],
+                "nombre" => $row["nombre"],
+                "apellido" => $row["apellido"],
+                "direccion" => $row["direccion"],
+                "telefono" => $row["telefono"]
+            );
+            array_push($objetos, $objeto);
+        }
+        echo json_encode($objetos);
+    }
+
+    public function obtenerEstudianteCondiciones($parametro1,$parametro2){
+        $this->conexion->Conectar();
+
+        // Para guardar todos los resultados posibles
+        // que coincidan con la busqueda
+        $objetos = array();
+
+        $sql = "SELECT * FROM estudiantes WHERE cedula LIKE '%$parametro1%' AND nombre LIKE '%$parametro2%'";
+        //$sql = "SELECT * FROM estudiante WHERE cedula = (SELECT cedula FROM tabla2 WHERE campo = '$parametro2')";
+        $resul = $this->conexion->conectar()->prepare($sql);
+        $resul->execute();
+
+        while ($row = $resul->fetch(PDO::FETCH_ASSOC)) {
+            $objeto = array(
+                "cedula" => $row["cedula"],
+                "nombre" => $row["nombre"],
+                "apellido" => $row["apellido"],
+                "direccion" => $row["direccion"],
+                "telefono" => $row["telefono"]
+            );
+            array_push($objetos, $objeto);
+        }
+        echo json_encode($objetos);
+    }
+
+    public function guardarEstudiante(){
+        $this->conexion->conectar();
+        $this->conexion->conectar()->beginTransaction();
+
+        $cedula = $_POST['cedula'];
+        $nombre = $_POST['nombre'];
+        $apellido = $_POST['apellido'];
+        $direccion = $_POST['direccion'];
+        $telefono = $_POST['telefono'];
+
+        $sql = "INSERT INTO estudiantes VALUES('$cedula', '$nombre', '$apellido', '$direccion', '$telefono')";
+        $resul = $this->conexion->conectar()->prepare($sql);
+        $resul->execute();
+
+        $this->conexion->conectar()->commit();
+        echo json_encode($resul);
+    }
+
+    public function actualizarEstudiante($cedula, $nombre, $apellido, $direccion, $telefono){
+        $this->conexion->conectar();
+        $this->conexion->conectar()->beginTransaction();
+        
+        $sql = "UPDATE estudiantes SET nombre='$nombre', apellido='$apellido', direccion='$direccion', telefono='$telefono' WHERE cedula='$cedula'";
+        $resul = $this->conexion->conectar()->prepare($sql);
+        $resul->execute();
+        
+        $this->conexion->conectar()->commit();
+        echo json_encode($resul);
+    }
+    
+    public function eliminarEstudiante($cedula){
+        $this->conexion->conectar();
+        $this->conexion->conectar()->beginTransaction();
+
+        $sql = "DELETE FROM estudiantes WHERE cedula='$cedula'";
+        $resul = $this->conexion->conectar()->prepare($sql);
+        $resul->execute();
+
+        $this->conexion->conectar()->commit();
+        $this->conexion->conectar();
+        echo json_encode($resul);
+    }
+}
+?>
+
+
+<?php
+include_once('CRUD.php');
+
+$crud = new CRUD();
+$opc = $_SERVER["REQUEST_METHOD"];
+
+switch ($opc) {
+
+    case "GET":
+        if (isset($_GET['cedula']) && isset($_GET['nombre'])){
+            // Probar en PostMan con:
+            //    params
+            $parametro1 = $_GET['cedula'];
+            $parametro2 = $_GET['nombre'];
+            $crud->obtenerEstudianteCondiciones($parametro1,$parametro2);
+            return;
+        }else if (isset($_GET['cedula'])) {
+            // Probar en PostMan con:
+            //    params
+            $cedula = $_GET['cedula'];
+            $crud->obtenerEstudiante($cedula);
+            return;
+        } else {
+            // Probar en PostMan con:
+            //    params (pero en vacio)
+            $crud->obtenerEstudiantes();
+            return;
+        }
+
+    case "POST":
+        // Probar en PostMan con:
+        //    form-data
+        //    x-www-form-ulrencoded
+        $crud->guardarEstudiante();
+        return;
+    
+    case "PUT":
+        // PARA LA TABLA DE ESTUDIANTES
+        // PARA LARAVEL
+        // PARA JAVA_ESCRITORIO
+        // PARA JAVA_WEB
+        // PARA SPRING_BOOT
+        // Probar en PostMan con:
+        //    x-www-form-urlencoded
+        parse_str(file_get_contents('php://input'), $putData);
+        $cedula = $putData['cedula'];
+        $nombre = $putData['nombre'];
+        $apellido = $putData['apellido'];
+        $direccion = $putData['direccion'];
+        $telefono = $putData['telefono'];
+        $crud->actualizarEstudiante($cedula, $nombre, $apellido, $direccion, $telefono);
+        return;
+    /*
+    case "PUT":
+        // Probar en PostMan con:
+        //    Params
+        $cedula = $_GET["cedula"];
+        $nombre = $_GET["nombre"];
+        $apellido = $_GET["apellido"];
+        $direccion = $_GET["direccion"];
+        $telefono = $_GET["telefono"];
+        $crud->actualizarEstudiante($cedula, $nombre, $apellido, $direccion, $telefono);
+        return;
+    */
+    /*    
+    case "PUT":
+        // Probar en PostMan con:
+        //    raw como JSON
+        $coso = file_get_contents("php://input");
+        $data =  json_decode($coso, true);
+        $cedula = $data['cedula'];
+        $nombre = $data['nombre'];
+        $apellido = $data['apellido'];
+        $direccion = $data['direccion'];
+        $telefono = $data['telefono'];
+        $crud->actualizarEstudiante($cedula, $nombre, $apellido, $direccion, $telefono);
+        return;
+    */
+
+    case "DELETE":
+        // Probar en PostMan con:
+        //    Params
+        $cedula = $_GET["cedula"];
+        $crud->eliminarEstudiante($cedula);
+        return;
+}
+
+
