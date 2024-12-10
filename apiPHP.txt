@@ -219,4 +219,436 @@ switch ($opc) {
         return;
 }
 
+--------------------------------------------------
+
+Para Mi Practica 
+
+<?php
+include_once("conexion.php");
+
+class Controlador{
+
+    private $conexion;
+
+    public function __construct()
+    {
+        $this->conexion = new Conexion();        
+    }
+
+    public function obtenerProductos(){
+        $sql = "SELECT p.id_producto, p.producto, p.cantidad, b.id_bodega, b.bodega, b.ubicacion, b.ciudad 
+        FROM productos p INNER JOIN producto_bodega pb ON p.id_producto = pb.id_producto
+        INNER JOIN bodegas b ON pb.id_bodega= b.id_bodega;";
+        $result = $this->conexion->conectar()->prepare($sql);
+        $result->execute();
+        $data = $result->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($data);
+    }
+
+    public function obtenerSoloProductos(){
+        $sql = "SELECT id_producto, producto, cantidad FROM productos";
+        $result = $this->conexion->conectar()->prepare($sql);
+        $result->execute();
+        $data = $result->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($data);
+    }
+
+    public function obtenerBodegas(){
+        $sql = "SELECT id_bodega, bodega, ubicacion, ciudad FROM bodegas";
+        $result = $this->conexion->conectar()->prepare($sql);
+        $result->execute();
+        $data = $result->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($data);
+    }
+
+    public function buscarPorProducto($nombre){
+
+        $sql = "SELECT p.id_producto, p.producto, p.cantidad, b.id_bodega, b.bodega, b.ubicacion, b.ciudad 
+        FROM productos p Left JOIN producto_bodega pb ON p.id_producto = pb.id_producto
+        left JOIN bodegas b ON pb.id_bodega= b.id_bodega 
+        WHERE p.producto LIKE '%$nombre%'";
+        $result = $this->conexion->conectar()->prepare($sql);
+        //$result->bindParam(':cedula', $cedula, PDO::PARAM_STR);
+        //
+        $result->execute();
+        $data = $result->fetchAll(PDO::FETCH_ASSOC);
+        //
+        if (!empty($data)) {
+            echo json_encode($data);
+        } else {
+            echo json_encode(["mensaje" => "No se encontraron resultados."]);
+        }
+    }
+
+    public function buscarPorIdProducto($idProducto){
+
+        $sql = "SELECT id_producto, producto, cantidad FROM productos
+        WHERE id_producto = :idProducto";
+        $result = $this->conexion->conectar()->prepare($sql);
+        $result->bindParam(':idProducto', $idProducto, PDO::PARAM_INT);
+        //
+        $result->execute();
+        $data = $result->fetchAll(PDO::FETCH_ASSOC);
+        //
+        if (!empty($data)) {
+            echo json_encode($data);
+        } else {
+            echo json_encode(["mensaje" => "No se encontraron resultados."]);
+        }
+    }
+
+    public function buscarPorBodega($idBodega){
+
+        $sql = "SELECT p.id_producto, p.producto, p.cantidad, b.id_bodega, b.bodega, b.ubicacion, b.ciudad 
+        FROM productos p INNER JOIN producto_bodega pb ON p.id_producto = pb.id_producto
+        INNER JOIN bodegas b ON pb.id_bodega= b.id_bodega 
+        WHERE b.id_bodega = :idBodega";
+        $result = $this->conexion->conectar()->prepare($sql);
+        $result->bindParam(':idBodega', $idBodega, PDO::PARAM_INT);
+        //
+        $result->execute();
+        $data = $result->fetchAll(PDO::FETCH_ASSOC);
+        //
+        if (!empty($data)) {
+            echo json_encode($data);
+        } else {
+            echo json_encode(["mensaje" => "No se encontraron resultados."]);
+        }
+    }
+
+    public function buscarPorProductoYCiudad($producto, $ciudad){
+        $sql = "SELECT p.id_producto, p.producto, p.cantidad, b.id_bodega, b.bodega, b.ubicacion, b.ciudad 
+        FROM productos p INNER JOIN producto_bodega pb ON p.id_producto = pb.id_producto
+        INNER JOIN bodegas b ON pb.id_bodega= b.id_bodega 
+        WHERE p.producto LIKE '%$producto%' AND b.ciudad ='$ciudad'";
+        $result = $this->conexion->conectar()->prepare($sql);
+
+        $result->execute();
+        $data = $result->fetchAll(PDO::FETCH_ASSOC);
+        //
+        if (!empty($data)) {
+            echo json_encode($data);
+        } else {
+            echo json_encode(["mensaje" => "No se encontraron resultados."]);
+        }
+    }
+
+    public function insertarProducto(){
+        try {
+            $conexion = $this->conexion->conectar();
+            $conexion->beginTransaction();
+    
+            // Obtener los datos desde el cuerpo de la solicitud
+            $producto = isset($_POST['producto']) ? $_POST['producto'] : null;
+            $cantidad = isset($_POST['cantidad']) ? $_POST['cantidad'] : null;
+    
+            // Validación de datos
+            if (empty($producto) || empty($cantidad)) {
+                //echo json_encode(["mensaje" => "No se ingresaron todos los datos."]);
+                return;
+            }
+    
+            $sql = "INSERT INTO productos (producto, cantidad) values (?, ?)";
+            $resul = $conexion->prepare($sql);
+    
+            // Ejecutar la consulta con los valores proporcionados
+            $resul->execute([$producto, $cantidad]);
+            $conexion->commit();
+    
+            // Responder al cliente
+            echo json_encode(["mensaje" => "Producto creado exitosamente."]);
+        } catch (Exception $e) {
+            $conexion->rollBack();
+            echo json_encode(["mensaje" => "Error al insertar el producto: " . $e->getMessage()]);
+        }
+    }
+    
+    
+
+    public function agregarProductoABodega(){
+        try {
+            $conexion = $this->conexion->conectar();
+            $conexion->beginTransaction();
+    
+            // Obtener los datos desde el cuerpo de la solicitud
+            $id_producto = isset($_POST['id_producto']) ? $_POST['id_producto'] : null;
+            $id_bodega = isset($_POST['id_bodega']) ? $_POST['id_bodega'] : null;
+    
+            // Validación de datos
+            if (empty($id_producto) || empty($id_bodega)) {
+                //echo json_encode(["mensaje" => "No se ingresaron todos los datos."]);
+                return;
+            }
+    
+            $sql = "INSERT INTO producto_bodega (id_producto, id_bodega) values (?, ?)";
+            $resul = $conexion->prepare($sql);
+    
+            // Ejecutar la consulta con los valores proporcionados
+            $resul->execute([$id_producto, $id_bodega]);
+            $conexion->commit();
+    
+            // Responder al cliente
+            echo json_encode(["mensaje" => "Relacion creado exitosamente."]);
+        } catch (Exception $e) {
+            $conexion->rollBack();
+            echo json_encode(["mensaje" => "Error al crear la Relacion: " . $e->getMessage()]);
+        }
+    }
+}
+
+?>
+
+
+<?php
+include_once("controlador.php");
+
+$controlador = new Controlador;
+$opcion = $_SERVER["REQUEST_METHOD"];
+
+switch ($opcion) {
+    case 'GET':
+
+        if (isset($_GET['producto'])) { //que sea like
+            $nombre = $_GET['producto'];
+            $controlador->buscarPorProducto($nombre);
+            return;
+        } else if (isset($_GET['id_bodega'])) {
+            $id_bodega = $_GET['id_bodega'];
+            $controlador->buscarPorBodega($id_bodega);
+            return;
+        } else if (isset($_GET['id_producto'])) {
+            $id_producto = $_GET['id_producto'];
+            $controlador->buscarPorIdProducto($id_producto);
+            return;
+        } else if (isset($_GET['producto']) && isset($_GET['ciudad'])) {
+            $producto = $_GET['producto'];
+            $ciudad = $_GET['ciudad'];
+
+            $controlador->buscarPorProductoYCiudad($producto, $ciudad);
+            return;
+        } else if (isset($_GET['detalles']) && $_GET['detalles'] == 'true') {
+            // Si el parámetro detalles es 'true', obtenemos los productos con detalles (bodega, ciudad, etc.)
+            $controlador->obtenerProductos();
+        } else if (isset($_GET['bodegas']) && $_GET['bodegas'] == 'true') {
+            // Si el parámetro detalles es 'true', obtenemos los productos con detalles (bodega, ciudad, etc.)
+            $controlador->obtenerBodegas();
+        } else {
+            // Si no se pasa ningún parámetro, solo obtenemos los productos básicos (sin detalles)
+            $controlador->obtenerSoloProductos();
+        }
+    case 'POST':
+        // Verificamos si el parámetro 'accion' está presente en la solicitud
+        if (isset($_POST['accion'])) {
+            $controlador->agregarProductoABodega(); // Llamamos a agregarProductoABodega()
+        } else {
+            // Si no se especifica una acción, asumimos que se debe insertar el producto
+            $controlador->insertarProducto(); // Llamamos a insertarProducto()
+        }
+        return;
+}
+
+
+---------------------------------------------------------
+
+
+Para lo del edwin:
+
+<?php
+include_once("./conexionPractica.php");
+
+class Controlador
+{
+
+    private $conexion;
+
+    public function __construct()
+    {
+        $this->conexion = new Conexion();
+    }
+
+    public function obtenerConteoProductosPorBodegas()
+    {
+        $sql = "SELECT 
+    b.nombre AS bodega, 
+    p.nombre AS producto, 
+        SUM(bp.cantidad) AS total
+    FROM 
+        bodegas b
+    JOIN 
+    bodegaproductos bp ON b.id = bp.bodega
+    JOIN 
+        productos p ON p.id = bp.producto
+    GROUP BY 
+        b.id, p.id
+    ORDER BY 
+        p.id, b.id;";
+        $result = $this->conexion->conectar()->prepare($sql);
+        $result->execute();
+        $data = $result->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($data);
+    }
+}
+
+<?php
+
+require_once "./controllerPractica.php";
+
+$controlador = new Controlador;
+$opcion = $_SERVER["REQUEST_METHOD"];
+
+switch ($opcion) {
+    case 'GET':
+        $controlador->obtenerConteoProductosPorBodegas();
+        break;
+    default:
+        break;
+}
+
+---------------------------------------------
+
+en el apiJava:
+
+
+package control;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import model.DtoInfo;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+
+public class Controlador {
+    
+        private final String apiUrl = "http://localhost/PracticaJavaWeb/PracticaProductos/apiPractica.php";
+
+    public List<DtoInfo> obtener() {
+        List<DtoInfo> lista = new ArrayList<>();
+        try {
+
+            URL url = new URL(apiUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Content-Type", "application/json");
+
+            if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+
+                StringBuilder response = new StringBuilder();
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+
+                JSONArray json = new JSONArray(response.toString());
+                for (int i = 0; i < json.length(); i++) {
+
+                    JSONObject objeto = json.getJSONObject(i);
+
+                    DtoInfo dato = new DtoInfo(
+                        objeto.getString("producto"),
+                        objeto.getString("bodega"),
+                        Integer.parseInt(objeto.getString("total"))
+                    );
+
+                    lista.add(dato);
+                }
+
+            } else {
+                System.out.println("Error: Código de respuesta HTTP " + conn.getResponseCode());
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return lista;
+    }
+}
+
+
+<%@page import="model.DtoInfo"%>
+<%@page import="java.util.List" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Lista de Productos</title>
+    </head>
+    <body>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Bodega</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Cantidad Total</th> <!-- Nueva columna para la cantidad total -->
+                </tr>
+            </thead>
+            <tbody>
+                <%
+                    List<DtoInfo> listaDatos = (List<DtoInfo>) request.getAttribute("listado");
+                    String productoActual = ""; // Producto actual en el bucle
+                    int contadorFilas = 0;      // Para contar las filas del producto actual
+                    int index = 0;             // Índice para iterar los datos
+
+                    if (listaDatos != null) {
+                        while (index < listaDatos.size()) {
+                            DtoInfo dato = listaDatos.get(index);
+                            productoActual = dato.getProducto();
+                            contadorFilas = 0;
+                            int cantidadTotal = 0; // Variable para almacenar la cantidad total del producto
+
+                            // Calcular cuántas filas corresponden al producto actual y la cantidad total
+                            for (DtoInfo temp : listaDatos) {
+                                if (temp.getProducto().equals(productoActual)) {
+                                    contadorFilas++;
+                                    cantidadTotal += temp.getCantidad(); // Sumar la cantidad de cada bodega
+                                }
+                            }
+
+                            // Imprimir la primera fila para este producto
+                %>
+                <tr>
+                    <td><%= dato.getBodega() %></td>
+                    <td rowspan="<%= contadorFilas %>"><%= dato.getProducto() %></td>
+                    <td><%= dato.getCantidad() %></td>
+                    <td rowspan="<%= contadorFilas %>"><%= cantidadTotal %></td> <!-- Mostrar cantidad total -->
+                </tr>
+                <%
+                            // Iterar sobre las filas restantes del mismo producto
+                            for (int i = 1; i < contadorFilas; i++) {
+                                index++;
+                                dato = listaDatos.get(index);
+                %>
+                <tr>
+                    <td><%= dato.getBodega() %></td>
+                    <td><%= dato.getCantidad() %></td>
+                    <!-- La cantidad total ya está en la primera fila, no la repetimos -->
+                </tr>
+                <%
+                            }
+                            index++;
+                        }
+                    } else {
+                %>
+                <tr>
+                    <td colspan="4">No hay datos disponibles</td>
+                </tr>
+                <%
+                    }
+                %>
+            </tbody>
+        </table>
+    </body>
+</html>
+
 
